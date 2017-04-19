@@ -1,82 +1,108 @@
+#!/usr/bin/env perl
+
 use strict;
 use warnings;
+
 use constant MARKER_FILE => "$ENV{HOME}/.cpan_new_timestamp";
+
 use XML::Simple;
 use Time::Piece;
 use Data::Dumper;
+
 use JSON;
+use Try::Tiny;
+use Config::Tiny;
+
+use DDP;
 use AnyEvent;
-use AnyEvent::HTTP;
-use AnyEvent::Twitter;
-use Config::PP;
-use AnyEvent::Log;
-use EV;
 use Getopt::Long;
-$AnyEvent::Log::FILTER->level("info");
-our @Q;
+use AnyEvent::HTTP;
+use Mastodon::Client;
 
-GetOptions('config-dir=s' => \$Config::PP::DIR)
-    or die "Invalid arguments";
+use Log::Any qw( $log );
+use Log::Any::Adapter;
+Log::Any::Adapter->set( 'Stderr',
+  category => 'Mastodon',
+  log_level => 'debug',
+);
 
-my $twitty = do {
-    my $OAuth  = config_get "cpan_new.twitter.com";
-    AnyEvent::Twitter->new(%$OAuth);
-};
+use Path::Tiny qw( path );
+my $timestamp = path "$ENV{HOME}/.cpan_new_timestamp";
+
+our @QUEUE;
+
+my ($configfile) = @ARGV;
+$configfile //= "$ENV{HOME}/.cpan_new.ini";
+
+my $config = (defined $configfile)
+  ? Config::Tiny->read( $configfile )->{_} : {};
+
+my $client = Mastodon::Client->new({
+  %{$config},
+  coerce_entities => 1,
+});
 
 my $w; $w = AE::timer 1, 30, sub {
-    AE::log info => 'start crawling';
-    http_get "https://metacpan.org/feed/recent", sub {
-        my ($data, $headers) = @_;
-        unless ($data) {
-            AE::log info => Dumper $headers;
-            return;
-        }
 
-        my $xml = XMLin($data);
-        for my $item (@{$xml->{item}}) {
-            my $item_timestamp = Time::Piece->strptime($item->{'dc:date'}, '%Y-%m-%dT%H:%M:%SZ')->epoch;
-            next if LATEST_TIMESTAMP() >= $item_timestamp;
-            LATEST_TIMESTAMP($item_timestamp);
-            my $title = sprintf "%-.80s", $item->{title};
-            tweet("$title by $item->{'dc:creator'} $item->{link}");
-        }
+  http_get "https://metacpan.org/feed/recent", sub {
+    my ($data, $headers) = @_;
 
+    unless ($data) {
+      $log->infof(Dumper $headers);
+      return;
     }
+
+    my $xml = XMLin($data);
+
+    foreach my $item (@{$xml->{item}}) {
+      my $item_timestamp = Time::Piece
+        ->strptime( $item->{'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
+        ->epoch;
+
+      next if LATEST_TIMESTAMP() >= $item_timestamp;
+
+      LATEST_TIMESTAMP($item_timestamp);
+
+      my $title = sprintf "%-.80s", $item->{title};
+
+      toot(sprintf "%s %s by %s\n%s\n%s",
+        '@jjatria@mastodon.cloud',
+        $title,
+        $item->{'dc:creator'},
+        $item->{description},
+        $item->{link}
+      );
+    }
+  }
 };
 
 my $qwatcher; $qwatcher = AE::timer 5, 300, sub {
-    my $string = shift @Q;
+    my $string = shift @QUEUE;
     tweet($string) if $string;
 };
 
-AE::log info => 'recv';
+$log->debug('Start crawling');
 AE::cv->recv;
 
-sub tweet {
-    my $string = shift;
-    $twitty->post('statuses/update', { status => $string }, sub {
-        if ($_[1]) {
-            AE::log info => "Send: $string; Receive: $_[1]->{text}";
-        } else {
-            AE::log warn => "Send: $string " . Dumper [@_];
-            push @Q, $string; # on error, push it to queue
-        }
-    });
+sub toot {
+  my $string = shift;
+
+  p my $response = try {
+    $log->debug($string);
+    $client->post_status( $string, { visibility => 'direct' } );
+  }
+  catch {
+    $log->warn('Died');
+    push @QUEUE, $string;
+  };
 }
 
 sub LATEST_TIMESTAMP {
-    my $epoch = shift;
-    if ($epoch) {
-        return -e MARKER_FILE ? utime $epoch, $epoch, MARKER_FILE : do {
-            open my $fh, ">", MARKER_FILE or die $!;
-            utime $epoch, $epoch, MARKER_FILE
-        }
-    } else {
-        return -e MARKER_FILE ? (stat MARKER_FILE)[9] : do {
-            open my $fh, ">", MARKER_FILE or die $!;
-            (stat MARKER_FILE)[9]
-        }
-    }
+  my $epoch = shift;
+
+  return ($epoch)
+    ? $timestamp->touchpath($epoch)
+    : $timestamp->stat->[9];
 }
 
 __END__
