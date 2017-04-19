@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 
-use constant MARKER_FILE => "$ENV{HOME}/.cpan_new_timestamp";
-
 use XML::Simple;
 use Time::Piece;
 use Data::Dumper;
@@ -77,8 +75,8 @@ my $w; $w = AE::timer 1, 30, sub {
 };
 
 my $qwatcher; $qwatcher = AE::timer 5, 300, sub {
-    my $string = shift @QUEUE;
-    tweet($string) if $string;
+  my $string = shift @QUEUE;
+  tweet($string) if $string;
 };
 
 $log->debug('Start crawling');
@@ -87,12 +85,12 @@ AE::cv->recv;
 sub toot {
   my $string = shift;
 
-  p my $response = try {
+  try {
     $log->debug($string);
     $client->post_status( $string, { visibility => 'direct' } );
   }
   catch {
-    $log->warn('Died');
+    $log->warnf('Died: %s', (split /\n/, $string)[0]);
     push @QUEUE, $string;
   };
 }
@@ -100,8 +98,10 @@ sub toot {
 sub LATEST_TIMESTAMP {
   my $epoch = shift;
 
+  $timestamp->touchpath unless -e $timestamp;
+
   return ($epoch)
-    ? $timestamp->touchpath($epoch)
+    ? $timestamp->touch($epoch)
     : $timestamp->stat->[9];
 }
 
