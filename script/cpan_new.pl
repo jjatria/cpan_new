@@ -11,7 +11,6 @@ use JSON;
 use Try::Tiny;
 use Config::Tiny;
 
-use DDP;
 use AnyEvent;
 use Getopt::Long;
 use AnyEvent::HTTP;
@@ -46,7 +45,7 @@ my $w; $w = AE::timer 1, 30, sub {
     my ($data, $headers) = @_;
 
     unless ($data) {
-      $log->infof(Dumper $headers);
+      $log->warnf(Dumper $headers);
       return;
     }
 
@@ -84,13 +83,14 @@ AE::cv->recv;
 
 sub toot {
   my $string = shift;
+  my ($brief) = split /\n/, $string;
 
-  try {
-    $log->debug($string);
+  return try {
+    $log->debug( $brief );
     $client->post_status( $string, { visibility => 'direct' } );
   }
   catch {
-    $log->warnf('Died: %s', (split /\n/, $string)[0]);
+    $log->warnf( '!%s: %s', $brief, $_ );
     push @QUEUE, $string;
   };
 }
@@ -106,4 +106,3 @@ sub LATEST_TIMESTAMP {
 }
 
 __END__
-
