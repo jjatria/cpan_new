@@ -62,8 +62,7 @@ my $w; $w = AE::timer 1, 30, sub {
 
       my $title = sprintf "%-.80s", $item->{title};
 
-      toot(sprintf "%s %s by %s\n%s\n%s",
-        '@jjatria@mastodon.cloud',
+      toot(sprintf "%s by %s\n%s\n%s",
         $title,
         $item->{'dc:creator'},
         $item->{description},
@@ -87,7 +86,7 @@ sub toot {
 
   return try {
     $log->debug( $brief );
-    $client->post_status( $string, { visibility => 'direct' } );
+    $client->post_status( $string, { visibility => 'public' } );
   }
   catch {
     $log->warnf( '!%s: %s', $brief, $_ );
