@@ -65,7 +65,7 @@ my $w; $w = AE::timer 1, 30, sub {
       toot(sprintf "%s by %s\n%s\n%s",
         $title,
         $item->{'dc:creator'},
-        $item->{description},
+        $item->{description} // '',
         $item->{link}
       );
     }
