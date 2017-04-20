@@ -1,19 +1,4 @@
-Revision history for Perl extension App::Twitter::CPAN
+Revision history for Mastodon CPAN bot
 
-0.06    Sun Nov  8 08:31:57 2015
-        - fix format
-
-0.05    Sun Nov  8 07:26:45 2015
-        - snip long distname
-
-0.04    Tue Apr  7 08:21:02 2015
-        - post distname (not namespace)
-
-0.03    Tue Apr  7 03:30:55 2015
-        - fix condition
-
-0.02    Tue Apr  7 03:21:48 2015
-        - deprecate friendfeed
-
-0.01    Tue Jan 29 01:38:43 2013
-        - original version
+0.01    Thu Apr 20 01:05:23 2017
+        - Forked off the Twitter bot v0.06
