@@ -86,7 +86,7 @@ sub toot {
 
   return try {
     $log->debug( $brief );
-    $client->post_status( $string, { visibility => 'public' } );
+    $client->post_status( $string, { visibility => 'unlisted' } );
   }
   catch {
     $log->warnf( '!%s: %s', $brief, $_ );
