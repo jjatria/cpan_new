@@ -49,7 +49,14 @@ my $w; $w = AE::timer 1, 30, sub {
       return;
     }
 
-    my $xml = XMLin($data);
+    my $xml = try {
+      XMLin($data);
+    }
+    catch {
+      $log->errorf('Could not parse XML: %s', $_);
+      $log->debug($data);
+      return { item => [] };
+    };
 
     foreach my $item (@{$xml->{item}}) {
       my $item_timestamp = Time::Piece
