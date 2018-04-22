@@ -81,7 +81,7 @@ my $w; $w = AE::timer 1, 30, sub {
 
 my $qwatcher; $qwatcher = AE::timer 5, 300, sub {
   my $string = shift @QUEUE;
-  tweet($string) if $string;
+  toot($string) if $string;
 };
 
 $log->debug('Start crawling');
