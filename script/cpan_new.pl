@@ -32,10 +32,10 @@ my $config = do {
     $config->{_};
 };
 
-my $client = Mastodon::Client->new({
-    %{ $config // {} },
+my $client = Mastodon::Client->new(
     coerce_entities => 1,
-});
+    %{ $config // {} },
+);
 
 my $w; $w = AE::timer 1, 30, sub {
 
