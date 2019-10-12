@@ -7,4 +7,4 @@ requires 'Mastodon::Client';
 requires 'Net::Async::HTTP';
 requires 'Path::Tiny';
 requires 'Syntax::Keyword::Try';
-requires 'XML::Tiny';
+requires 'XML::Tiny::DOM';

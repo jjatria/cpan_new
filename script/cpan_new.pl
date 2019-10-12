@@ -15,7 +15,7 @@ use Net::Async::HTTP;
 use Path::Tiny qw( path );
 use Syntax::Keyword::Try;
 use Time::Piece;
-use XML::Tiny 'parsefile';
+use XML::Tiny::DOM;
 
 Log::Any::Adapter->set( 'Stderr',
     category => 'Mastodon',
@@ -47,11 +47,11 @@ my $timer = IO::Async::Timer::Periodic->new(
             on_response => sub {
                 my $res = shift;
 
-                my $xml;
+                my $dom;
                 try {
                     my $body = $res->content;
                     open my $fh, '<', \$body;
-                    $xml = shift @{ parsefile $fh };
+                    $dom = XML::Tiny::DOM->new($fh);
                 }
                 catch {
                     $log->errorf('Could not parse XML: %s', $_);
@@ -59,23 +59,23 @@ my $timer = IO::Async::Timer::Periodic->new(
                     return;
                 }
 
-                for my $item ( @{ $xml->{item} } ) {
+                for my $item ( $dom->item('*') ) {
                     my $item_timestamp = Time::Piece
-                        ->strptime( $item->{'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
+                        ->strptime( $item->${\'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
                         ->epoch;
 
                     next if latest_timestamp() >= $item_timestamp;
 
                     latest_timestamp($item_timestamp);
 
-                    my $title = sprintf '%-.80s', $item->{title};
+                    my $title = sprintf '%-.80s', $item->title;
 
                     toot(
                         sprintf "%s by %s\n%s\n%s",
                         $title,
-                        $item->{'dc:creator'},
-                        $item->{description} // '',
-                        $item->{link}
+                        $item->${\'dc:creator'},
+                        $item->description // '',
+                        $item->link
                     );
                 }
             },

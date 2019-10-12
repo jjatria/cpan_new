@@ -1711,6 +1711,15 @@ DISTRIBUTIONS
       XML::Tiny 2.07
     requirements:
       ExtUtils::MakeMaker 0
+  XML-Tiny-DOM-1.1
+    pathname: D/DC/DCANTRELL/XML-Tiny-DOM-1.1.tar.gz
+    provides:
+      XML::Tiny::DOM 1.1
+      XML::Tiny::DOM::Element 1.1
+    requirements:
+      ExtUtils::MakeMaker 0
+      Test::More 0
+      XML::Tiny 2.02
   libwww-perl-6.39
     pathname: O/OA/OALDERS/libwww-perl-6.39.tar.gz
     provides:
