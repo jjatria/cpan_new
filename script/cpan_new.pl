@@ -7,12 +7,10 @@ use XML::Simple;
 use Time::Piece;
 use Data::Dumper;
 
-use JSON;
 use Try::Tiny;
 use Config::Tiny;
 
 use AnyEvent;
-use Getopt::Long;
 use AnyEvent::HTTP;
 use Mastodon::Client;
 
