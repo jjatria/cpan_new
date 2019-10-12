@@ -21,8 +21,6 @@ Log::Any::Adapter->set( 'Stderr',
     log_level => 'debug',
 );
 
-our @QUEUE;
-
 my $config = do {
     my $configfile = path( shift // '~/.cpan_new.ini' );
     my $config = Config::Tiny->read( $configfile );
@@ -77,27 +75,31 @@ my $w; $w = AE::timer 1, 30, sub {
     }
 };
 
-my $qwatcher; $qwatcher = AE::timer 5, 300, sub {
-    my $string = shift @QUEUE;
-    toot($string) if $string;
-};
+{
+    my @QUEUE;
+
+    sub toot {
+        my $string = shift;
+        my ($brief) = split /\n/, $string;
+
+        try {
+            $log->debug( $brief );
+            $client->post_status( $string, { visibility => 'unlisted' } );
+        }
+        catch {
+            $log->warnf( '!%s: %s', $brief, $_ );
+            push @QUEUE, $string;
+        }
+    }
+
+    my $qwatcher; $qwatcher = AE::timer 5, 300, sub {
+        my $string = shift @QUEUE;
+        toot($string) if $string;
+    };
+}
 
 $log->debug('Start crawling');
 AE::cv->recv;
-
-sub toot {
-    my $string = shift;
-    my ($brief) = split /\n/, $string;
-
-    try {
-        $log->debug( $brief );
-        $client->post_status( $string, { visibility => 'unlisted' } );
-    }
-    catch {
-        $log->warnf( '!%s: %s', $brief, $_ );
-        push @QUEUE, $string;
-    }
-}
 
 sub latest_timestamp {
     my $epoch = shift;
