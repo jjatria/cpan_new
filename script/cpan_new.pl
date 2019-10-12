@@ -26,13 +26,14 @@ my $timestamp = path '~/.cpan_new_timestamp';
 
 our @QUEUE;
 
-my $configfile = path( shift // '~/.cpan_new.ini' );
-
-my $config = (defined $configfile)
-    ? Config::Tiny->read( $configfile )->{_} : {};
+my $config = do {
+    my $configfile = path( shift // '~/.cpan_new.ini' );
+    my $config = Config::Tiny->read( $configfile );
+    $config->{_};
+};
 
 my $client = Mastodon::Client->new({
-    %{$config},
+    %{ $config // {} },
     coerce_entities => 1,
 });
 
