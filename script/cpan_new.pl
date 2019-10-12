@@ -22,12 +22,11 @@ Log::Any::Adapter->set( 'Stderr',
 );
 
 use Path::Tiny qw( path );
-my $timestamp = path "$ENV{HOME}/.cpan_new_timestamp";
+my $timestamp = path '~/.cpan_new_timestamp';
 
 our @QUEUE;
 
-my ($configfile) = @ARGV;
-$configfile //= "$ENV{HOME}/.cpan_new.ini";
+my $configfile = path( shift // '~/.cpan_new.ini' );
 
 my $config = (defined $configfile)
     ? Config::Tiny->read( $configfile )->{_} : {};
