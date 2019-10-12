@@ -7,7 +7,7 @@ use XML::Tiny 'parsefile';
 use Time::Piece;
 use Data::Dumper;
 
-use Try::Tiny;
+use Syntax::Keyword::Try;
 use Config::Tiny;
 
 use AnyEvent;
@@ -47,15 +47,17 @@ my $w; $w = AE::timer 1, 30, sub {
             return;
         }
 
-        my $xml = try {
+        my $xml;
+
+        try {
             open my $fh, '<', \$data;
-            shift @{ parsefile $fh };
+            $xml = shift @{ parsefile $fh };
         }
         catch {
             $log->errorf('Could not parse XML: %s', $_);
             $log->debug($data);
-            return { item => [] };
-        };
+            return;
+        }
 
         foreach my $item (@{$xml->{item}}) {
             my $item_timestamp = Time::Piece
@@ -90,14 +92,14 @@ sub toot {
     my $string = shift;
     my ($brief) = split /\n/, $string;
 
-    return try {
+    try {
         $log->debug( $brief );
         $client->post_status( $string, { visibility => 'unlisted' } );
     }
     catch {
         $log->warnf( '!%s: %s', $brief, $_ );
         push @QUEUE, $string;
-    };
+    }
 }
 
 sub LATEST_TIMESTAMP {
