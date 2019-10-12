@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use XML::Simple;
+use XML::Tiny 'parsefile';
 use Time::Piece;
 use Data::Dumper;
 
@@ -48,7 +48,8 @@ my $w; $w = AE::timer 1, 30, sub {
         }
 
         my $xml = try {
-            XMLin($data);
+            open my $fh, '<', \$data;
+            shift @{ parsefile $fh };
         }
         catch {
             $log->errorf('Could not parse XML: %s', $_);
