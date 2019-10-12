@@ -4,13 +4,14 @@ use strict;
 use warnings;
 use feature 'state';
 
-use AnyEvent::HTTP;
-use AnyEvent;
 use Config::Tiny;
 use Data::Dumper;
+use IO::Async::Loop;
+use IO::Async::Timer::Periodic;
 use Log::Any qw( $log );
 use Log::Any::Adapter;
 use Mastodon::Client;
+use Net::Async::HTTP;
 use Path::Tiny qw( path );
 use Syntax::Keyword::Try;
 use Time::Piece;
@@ -32,48 +33,61 @@ my $client = Mastodon::Client->new(
     %{ $config // {} },
 );
 
-my $w; $w = AE::timer 1, 30, sub {
+my $loop = IO::Async::Loop->new;
 
-    http_get "https://metacpan.org/feed/recent", sub {
-        my ($data, $headers) = @_;
+my $ua = Net::Async::HTTP->new( fail_on_error => 1 );
+$loop->add($ua);
 
-        unless ($data) {
-            $log->warnf(Dumper $headers);
-            return;
-        }
+my $timer = IO::Async::Timer::Periodic->new(
+    first_interval => 1,
+    interval       => 30,
+    on_tick        => sub {
+        $ua->do_request(
+            uri => 'https://metacpan.org/feed/recent',
+            on_response => sub {
+                my $res = shift;
 
-        my $xml;
+                my $xml;
+                try {
+                    my $body = $res->content;
+                    open my $fh, '<', \$body;
+                    $xml = shift @{ parsefile $fh };
+                }
+                catch {
+                    $log->errorf('Could not parse XML: %s', $_);
+                    $log->debug( $res->content );
+                    return;
+                }
 
-        try {
-            open my $fh, '<', \$data;
-            $xml = shift @{ parsefile $fh };
-        }
-        catch {
-            $log->errorf('Could not parse XML: %s', $_);
-            $log->debug($data);
-            return;
-        }
+                for my $item ( @{ $xml->{item} } ) {
+                    my $item_timestamp = Time::Piece
+                        ->strptime( $item->{'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
+                        ->epoch;
 
-        foreach my $item (@{$xml->{item}}) {
-            my $item_timestamp = Time::Piece
-                ->strptime( $item->{'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
-                ->epoch;
+                    next if latest_timestamp() >= $item_timestamp;
 
-            next if latest_timestamp() >= $item_timestamp;
+                    latest_timestamp($item_timestamp);
 
-            latest_timestamp($item_timestamp);
+                    my $title = sprintf '%-.80s', $item->{title};
 
-            my $title = sprintf "%-.80s", $item->{title};
+                    toot(
+                        sprintf "%s by %s\n%s\n%s",
+                        $title,
+                        $item->{'dc:creator'},
+                        $item->{description} // '',
+                        $item->{link}
+                    );
+                }
+            },
+            on_error => sub {
+                $log->warn( Dumper shift );
+            },
+        );
+    },
+);
 
-            toot(sprintf "%s by %s\n%s\n%s",
-                $title,
-                $item->{'dc:creator'},
-                $item->{description} // '',
-                $item->{link}
-            );
-        }
-    }
-};
+$timer->start;
+$loop->add($timer);
 
 {
     my @QUEUE;
@@ -92,14 +106,22 @@ my $w; $w = AE::timer 1, 30, sub {
         }
     }
 
-    my $qwatcher; $qwatcher = AE::timer 5, 300, sub {
-        my $string = shift @QUEUE;
-        toot($string) if $string;
-    };
+    my $watcher = IO::Async::Timer::Periodic->new(
+        first_interval => 5,
+        interval       => 300,
+        on_tick        => sub {
+            my $string = shift @QUEUE;
+            toot($string) if $string;
+        },
+    );
+
+    $watcher->start;
+
+    $loop->add($watcher);
 }
 
 $log->debug('Start crawling');
-AE::cv->recv;
+$loop->run;
 
 sub latest_timestamp {
     my $epoch = shift;
