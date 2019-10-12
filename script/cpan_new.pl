@@ -3,25 +3,23 @@
 use strict;
 use warnings;
 
-use XML::Tiny 'parsefile';
-use Time::Piece;
-use Data::Dumper;
-
-use Syntax::Keyword::Try;
-use Config::Tiny;
-
-use AnyEvent;
 use AnyEvent::HTTP;
-use Mastodon::Client;
-
+use AnyEvent;
+use Config::Tiny;
+use Data::Dumper;
 use Log::Any qw( $log );
 use Log::Any::Adapter;
+use Mastodon::Client;
+use Path::Tiny qw( path );
+use Syntax::Keyword::Try;
+use Time::Piece;
+use XML::Tiny 'parsefile';
+
 Log::Any::Adapter->set( 'Stderr',
     category => 'Mastodon',
     log_level => 'debug',
 );
 
-use Path::Tiny qw( path );
 my $timestamp = path '~/.cpan_new_timestamp';
 
 our @QUEUE;
