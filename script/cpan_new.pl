@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use feature 'state';
 
 use AnyEvent::HTTP;
 use AnyEvent;
@@ -19,8 +20,6 @@ Log::Any::Adapter->set( 'Stderr',
     category => 'Mastodon',
     log_level => 'debug',
 );
-
-my $timestamp = path '~/.cpan_new_timestamp';
 
 our @QUEUE;
 
@@ -62,9 +61,9 @@ my $w; $w = AE::timer 1, 30, sub {
                 ->strptime( $item->{'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
                 ->epoch;
 
-            next if LATEST_TIMESTAMP() >= $item_timestamp;
+            next if latest_timestamp() >= $item_timestamp;
 
-            LATEST_TIMESTAMP($item_timestamp);
+            latest_timestamp($item_timestamp);
 
             my $title = sprintf "%-.80s", $item->{title};
 
@@ -100,8 +99,10 @@ sub toot {
     }
 }
 
-sub LATEST_TIMESTAMP {
+sub latest_timestamp {
     my $epoch = shift;
+
+    state $timestamp = path '~/.cpan_new_timestamp';
 
     $timestamp->touchpath unless -e $timestamp;
 
@@ -109,5 +110,3 @@ sub LATEST_TIMESTAMP {
         ? $timestamp->touch($epoch)
         : $timestamp->stat->[9];
 }
-
-__END__
