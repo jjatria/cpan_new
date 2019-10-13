@@ -1,9 +1,9 @@
+requires 'curry';
 requires 'Config::Tiny';
 requires 'IO::Async';
 requires 'IO::Async::SSL';
 requires 'Log::Any';
 requires 'Log::Any::Adapter';
-requires 'LWP::Protocol::https';
 requires 'Mastodon::Client';
 requires 'Net::Async::HTTP';
 requires 'Path::Tiny';

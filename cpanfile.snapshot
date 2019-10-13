@@ -1720,6 +1720,14 @@ DISTRIBUTIONS
       ExtUtils::MakeMaker 0
       Test::More 0
       XML::Tiny 2.02
+  curry-1.001000
+    pathname: M/MS/MSTROUT/curry-1.001000.tar.gz
+    provides:
+      curry 1.001000
+      curry::weak 1.001000
+    requirements:
+      ExtUtils::MakeMaker 0
+      perl 5.006
   libwww-perl-6.39
     pathname: O/OA/OALDERS/libwww-perl-6.39.tar.gz
     provides:

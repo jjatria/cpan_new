@@ -1,8 +1,9 @@
 #!/usr/bin/env perl
 
+use curry;
+use feature 'state';
 use strict;
 use warnings;
-use feature 'state';
 
 use Config::Tiny;
 use Data::Dumper;
@@ -14,6 +15,7 @@ use Net::Async::HTTP;
 use Path::Tiny qw( path );
 use Syntax::Keyword::Try;
 use Time::Piece;
+use Time::Seconds 'ONE_HOUR';
 use XML::Tiny::DOM;
 
 use Log::Any::Adapter Stderr => ( log_level => 'debug' );
@@ -34,6 +36,8 @@ my $loop = IO::Async::Loop->new;
 my $ua = Net::Async::HTTP->new( fail_on_error => 1 );
 $loop->add($ua);
 
+$loop->delay_future( after => ONE_HOUR )
+    ->on_done( $loop->curry::weak::stop );
 
 $loop->add(
     IO::Async::Timer::Periodic->new(
