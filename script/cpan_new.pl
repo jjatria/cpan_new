@@ -42,9 +42,11 @@ my $timer = IO::Async::Timer::Periodic->new(
     first_interval => 1,
     interval       => 30,
     on_tick        => sub {
+        $log->trace('Fetching feed');
         $ua->do_request(
             uri => 'https://metacpan.org/feed/recent',
             on_response => sub {
+                $log->trace('Got feed');
                 my $res = shift;
 
                 my $dom;
@@ -59,12 +61,23 @@ my $timer = IO::Async::Timer::Periodic->new(
                     return;
                 }
 
+                $log->trace( Dumper [ $dom->item('*') ] );
+
                 for my $item ( $dom->item('*') ) {
                     my $item_timestamp = Time::Piece
                         ->strptime( $item->${\'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
                         ->epoch;
 
-                    next if latest_timestamp() >= $item_timestamp;
+                    $log->tracef(
+                        'Found %s posted at %s',
+                        $item->title,
+                        $item->${\'dc:date'},
+                    );
+
+                    if ( latest_timestamp() >= $item_timestamp ) {
+                        $log->tracef('Post is too old');
+                        next;
+                    }
 
                     latest_timestamp($item_timestamp);
 
@@ -80,6 +93,7 @@ my $timer = IO::Async::Timer::Periodic->new(
                 }
             },
             on_error => sub {
+                $log->trace('Error fetching feed');
                 $log->warn( Dumper shift );
             },
         );
