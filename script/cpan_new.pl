@@ -9,7 +9,6 @@ use Data::Dumper;
 use IO::Async::Loop;
 use IO::Async::Timer::Periodic;
 use Log::Any qw( $log );
-use Log::Any::Adapter;
 use Mastodon::Client;
 use Net::Async::HTTP;
 use Path::Tiny qw( path );
@@ -17,10 +16,7 @@ use Syntax::Keyword::Try;
 use Time::Piece;
 use XML::Tiny::DOM;
 
-Log::Any::Adapter->set( 'Stderr',
-    category => 'Mastodon',
-    log_level => 'debug',
-);
+use Log::Any::Adapter Stderr => ( log_level => 'debug' );
 
 my $config = do {
     my $configfile = path( shift // '~/.cpan_new.ini' );
