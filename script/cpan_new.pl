@@ -57,8 +57,6 @@ my $timer = IO::Async::Timer::Periodic->new(
                     return;
                 }
 
-                $log->trace( Dumper [ $dom->item('*') ] );
-
                 for my $item ( $dom->item('*') ) {
                     my $item_timestamp = Time::Piece
                         ->strptime( $item->${\'dc:date'}, '%Y-%m-%dT%H:%M:%SZ' )
